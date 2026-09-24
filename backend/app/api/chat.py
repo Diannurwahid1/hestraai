@@ -33,6 +33,8 @@ async def chat(request: ChatRequest, session: AsyncSession = Depends(get_session
     llm = LLMService()
     saved = await get_settings_record(session, user.id)
     override = request.llm or to_llm_config(saved)
+    if override and request.model_override and request.model_override.strip():
+        override = override.model_copy(update={"model": request.model_override.strip()})
     evidence_context = None
     if request.context_id:
         signal_id = request.context_id.removeprefix("signal.")

@@ -7,6 +7,6 @@ export type ChatPresentation = {
 };
 export type ChatMessage = { id: string; role: "user" | "assistant"; text: string; context_id?: string; model?: string; presentation?: ChatPresentation | null };
 
-export const sendChat = (message: string, contextId?: string) => apiPost<{ message: string; model: string; presentation: ChatPresentation }>("/api/chat", { message, context_id: contextId });
+export const sendChat = (message: string, contextId?: string, modelOverride?: string) => apiPost<{ message: string; model: string; presentation: ChatPresentation }>("/api/chat", { message, context_id: contextId, model_override: modelOverride || undefined });
 export const getChatHistory = () => apiGet<{ messages: ChatMessage[] }>("/api/chat/history");
 export const clearChatHistory = () => apiDelete<{ cleared: boolean }>("/api/chat/history");

@@ -19,6 +19,8 @@ export default function SettingsPage() {
   const [status, setStatus] = useState("Ready");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [manualModel, setManualModel] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -29,9 +31,25 @@ export default function SettingsPage() {
       try {
         const [settingsResult, usageResult, logsResult, profileResult] = await Promise.all([getAIModelSettings(), getAIUsage(), getAILogs(), getOnboarding()]);
         setSettings(settingsResult.data);
+        setManualModel(Boolean(settingsResult.data.models.length && settingsResult.data.model && !settingsResult.data.models.includes(settingsResult.data.model)));
         setUsage(usageResult.data);
         setLogs(logsResult.data.logs);
         setProfile(profileResult.data.profile);
+        const configured = settingsResult.data;
+        if (!configured.models.length && configured.base_url && (configured.has_api_key || configured.api_key)) {
+          setModelsLoading(true);
+          setStatus("Loading available models...");
+          try {
+            const result = await loadAIModels(configured);
+            const models = result.data.models;
+            setSettings(current => ({ ...current, models, model: models.includes(current.model) ? current.model : models[0] || current.model }));
+            setStatus(models.length ? `${models.length} models available` : "Gateway returned no models; enter a model ID manually");
+          } catch (cause) {
+            setStatus(cause instanceof Error ? `Could not load models: ${cause.message}` : "Could not load models; enter a model ID manually");
+          } finally {
+            setModelsLoading(false);
+          }
+        }
       } catch (cause) {
         setStatus(cause instanceof Error ? cause.message : "Unable to load settings");
       } finally {
@@ -59,14 +77,18 @@ export default function SettingsPage() {
   };
 
   const refreshModels = async () => {
+    setModelsLoading(true);
     setStatus("Loading model list...");
     try {
       const result = await loadAIModels(settings);
       const models = result.data.models;
-      update({ models, model: settings.model || models[0] || "" });
-      setStatus(models.length ? `${models.length} models loaded` : "No models returned");
-    } catch {
-      setStatus("Model list failed; enter model manually");
+      setSettings(current => ({ ...current, models, model: models.includes(current.model) ? current.model : models[0] || current.model }));
+      setManualModel(false);
+      setStatus(models.length ? `${models.length} models available` : "Gateway returned no models; enter a model ID manually");
+    } catch (cause) {
+      setStatus(cause instanceof Error ? `Could not load models: ${cause.message}` : "Could not load models; enter a model ID manually");
+    } finally {
+      setModelsLoading(false);
     }
   };
   const refreshUsage = async () => {
@@ -101,11 +123,16 @@ export default function SettingsPage() {
               <label>Base URL<input value={settings.base_url} onChange={e => update({ base_url: e.target.value })} placeholder="https://router.bynara.id/v1" /></label>
               <label className="key-field">API Key<div><input type={showKey ? "text" : "password"} value={settings.api_key} onChange={e => update({ api_key: e.target.value })} placeholder={settings.has_api_key ? "Key configured — leave blank to keep" : "Enter your API key"} /><button type="button" onClick={() => setShowKey(value => !value)} aria-label="Toggle API key visibility">{showKey ? <EyeOff /> : <Eye />}</button></div></label>
               <div className="model-row">
-                <label>Model<input list="ai-model-list" value={settings.model} onChange={e => update({ model: e.target.value })} placeholder="agnes-3-flash" /></label>
-                <button type="button" onClick={refreshModels} className="secondary-action"><RefreshCw size={15} /> Load Models</button>
-                <datalist id="ai-model-list">{settings.models.map(model => <option value={model} key={model} />)}</datalist>
+                <label>Model{settings.models.length > 0 && !manualModel
+                  ? <select value={settings.model} onChange={e => update({ model: e.target.value })} aria-label="Default AI model">{settings.models.map(model => <option value={model} key={model}>{model}</option>)}</select>
+                  : <input value={settings.model} onChange={e => update({ model: e.target.value })} placeholder="Enter a model ID" aria-label="Default AI model" />}</label>
+                <button type="button" onClick={refreshModels} className="secondary-action" disabled={modelsLoading}>{modelsLoading ? <Loader2 className="spin" size={15} /> : <RefreshCw size={15} />}{modelsLoading ? "Loading..." : settings.models.length ? "Refresh Models" : "Load Models"}</button>
               </div>
-              <div className="settings-actions"><span>{status}</span><button className="sign-in compact" disabled={saving}>{saving ? <Loader2 className="spin" /> : <Save />} Save AI Model</button></div>
+              {settings.models.length > 0 && <div className="model-list-note"><span>{settings.models.length} models available from this gateway.</span><button type="button" onClick={() => {
+                if (manualModel && !settings.models.includes(settings.model)) update({ model: settings.models[0] });
+                setManualModel(value => !value);
+              }}>{manualModel ? "Choose from list" : "Enter ID manually"}</button></div>}
+              <div className="settings-actions"><span role="status">{status}</span><button className="sign-in compact" disabled={saving || modelsLoading}>{saving ? <Loader2 className="spin" /> : <Save />} Save AI Model</button></div>
             </form>
           </section>
 

@@ -8,6 +8,7 @@ import { ArrowUp, BarChart3, ChevronDown, Minus, Search, Settings, Trash2, X } f
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { ContextAttachment } from "@/components/shared/ui";
 import { clearChatHistory, getChatHistory, sendChat, type ChatMessage, type ChatPresentation } from "@/services/ai-chat";
+import { getAIModelSettings, loadAIModels } from "@/services/ai-model";
 import { useHestraChat } from "./chat-provider";
 
 const quick = ["Compare ANTM vs INCO", "Explain attached evidence", "What remains unresolved?"];
@@ -32,8 +33,43 @@ export function HestraChat({ preset = "dashboard" }: { preset?: "dashboard" | "c
   const [sending, setSending] = useState(false);
   const [stage, setStage] = useState(0);
   const [followUpContext, setFollowUpContext] = useState<string | undefined>();
+  const [modelOptions, setModelOptions] = useState<string[]>([]);
+  const [selectedModel, setSelectedModel] = useState("");
+  const [modelsLoading, setModelsLoading] = useState(true);
+  const [modelError, setModelError] = useState("");
+  const modelStorageKey = useRef("");
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => { void getChatHistory().then(result => setMessages(result.data.messages)).catch(e => setError(e.message)); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    const loadModels = async () => {
+      try {
+        const result = await getAIModelSettings();
+        const settings = result.data;
+        let models = settings.models;
+        let listingFailed = false;
+        if (!models.length && settings.base_url && (settings.has_api_key || settings.api_key)) {
+          try { models = (await loadAIModels(settings)).data.models; }
+          catch { listingFailed = true; if (!cancelled) setModelError("Could not load the gateway model list."); }
+        }
+        if (cancelled) return;
+        if (!models.length && !listingFailed && !settings.model) setModelError("No model is configured yet.");
+        else if (!models.length && !listingFailed) setModelError("The gateway returned no model list.");
+        const available = [...new Set([...models, ...(settings.model ? [settings.model] : [])])];
+        const storageKey = `hestra.chat.model.${settings.user_id}`;
+        modelStorageKey.current = storageKey;
+        const preferred = window.localStorage.getItem(storageKey);
+        setModelOptions(available);
+        setSelectedModel(preferred && available.includes(preferred) ? preferred : settings.model || available[0] || "");
+      } catch (cause) {
+        if (!cancelled) setModelError(cause instanceof Error ? cause.message : "Could not load AI model settings.");
+      } finally {
+        if (!cancelled) setModelsLoading(false);
+      }
+    };
+    void loadModels();
+    return () => { cancelled = true; };
+  }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages, stage, error]);
   useEffect(() => {
     if (!sending) return;
@@ -56,7 +92,7 @@ export function HestraChat({ preset = "dashboard" }: { preset?: "dashboard" | "c
     setSending(true); setStage(0); setError(""); setDraft("");
     setMessages(previous => [...previous, { id: `local-${Date.now()}`, role: "user", text }]);
     try {
-      const result = await sendChat(text, selectedContext);
+      const result = await sendChat(text, selectedContext, selectedModel);
       setMessages(previous => [...previous, { id: `reply-${Date.now()}`, role: "assistant", text: result.data.message,
         model: result.data.model, context_id: selectedContext, presentation: result.data.presentation }]);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "AI explanation is unavailable. Check your model settings."); }
@@ -89,7 +125,13 @@ export function HestraChat({ preset = "dashboard" }: { preset?: "dashboard" | "c
       {attachmentError && <div className="bubble assistant" role="alert">Could not attach context: {attachmentError}</div>}
       <div ref={endRef}/>
     </div>
-    <div className="chat-bottom"><ContextAttachment/><div className="quick-chips">{quick.map(question => <button type="button" key={question} onClick={() => setDraft(question)}>{question}</button>)}</div>
+    <div className="chat-bottom"><ContextAttachment/>
+      <div className="chat-model-picker"><label htmlFor="chat-model-select">Model</label><select id="chat-model-select" value={selectedModel} disabled={modelsLoading || sending || modelOptions.length === 0} onChange={event => {
+        setSelectedModel(event.target.value);
+        if (modelStorageKey.current) window.localStorage.setItem(modelStorageKey.current, event.target.value);
+      }}>{modelsLoading ? <option value="">Loading models...</option> : modelOptions.length ? modelOptions.map(model => <option value={model} key={model}>{model}</option>) : <option value="">No model configured</option>}</select></div>
+      {modelError && <small className="chat-model-hint">{modelError} <Link href="/settings">Open Settings</Link></small>}
+      <div className="quick-chips">{quick.map(question => <button type="button" key={question} onClick={() => setDraft(question)}>{question}</button>)}</div>
       <form onSubmit={submit}><input value={draft} onChange={event => setDraft(event.target.value)} placeholder="Ask a research question…" aria-label="Ask a research question"/><button className="send" aria-label="Send" disabled={sending || attaching || !draft.trim()}><ArrowUp size={17}/></button></form>
       <small>Research answers should be checked against the attached sources.</small>
     </div>

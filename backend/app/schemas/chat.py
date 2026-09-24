@@ -16,6 +16,7 @@ class ChatRequest(BaseModel):
     user_id: str = ""
     profile: Literal["junior", "senior"] = "senior"
     llm: LLMRouterConfig | None = None
+    model_override: str | None = Field(default=None, max_length=180)
 
 
 class ModelListRequest(BaseModel):
