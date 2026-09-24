@@ -1,0 +1,20 @@
+[Unit]
+Description=Hestra AI Next.js frontend
+After=network-online.target hestra-backend.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/hestraai/frontend
+Environment=NODE_ENV=production
+EnvironmentFile=-/home/ubuntu/hestraai/frontend/.env.production.local
+ExecStart=/usr/bin/npm run start -- --hostname 127.0.0.1 --port 3000
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
