@@ -11,6 +11,8 @@ import {
   ShieldCheck,
   Workflow,
 } from "lucide-react";
+import { HeroRobot3D } from "@/components/landing/hero-robot-3d";
+import { LandingCursor } from "@/components/landing/landing-cursor";
 
 const signals = [
   ["Operational / Financial Divergence", "Detects when company activity improves while profitability weakens."],
@@ -28,6 +30,7 @@ const workflow = [
 export default function Home() {
   return (
     <main className="landing-page">
+      <LandingCursor />
       <nav className="landing-nav" aria-label="Landing navigation">
         <Link href="/" className="brand landing-brand" aria-label="Hestra AI home">
           <span className="brand-mark" aria-hidden="true"><i /><b /></span>
@@ -64,7 +67,7 @@ export default function Home() {
 
         <div className="landing-visual" aria-label="Hestra research interface preview">
           <div className="landing-orbit" />
-          <Image src="/hestra-robot.png" alt="Hestra AI research assistant" fill priority sizes="48vw" />
+          <HeroRobot3D />
           <div className="landing-terminal">
             <span>LIVE SIGNAL</span>
             <h2>Operational / Financial Divergence</h2>
