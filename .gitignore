@@ -1,0 +1,40 @@
+# Secrets and machine-local configuration
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+
+# Local databases and runtime data
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+backend/*.egg-info/
+
+# JavaScript / Next.js
+node_modules/
+.next/
+out/
+build/
+coverage/
+*.tsbuildinfo
+
+# Logs and editor/OS files
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# QA captures and local review material
+qa/
