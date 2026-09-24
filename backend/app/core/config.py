@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_env: str = "development"
+    public_registration_enabled: bool = False
     frontend_origin: str = "http://localhost:3000"
     database_url: str = "sqlite+aiosqlite:///./hestra.db"
     sectors_api_key: str = ""

@@ -6,6 +6,7 @@ type AuthResponse = { token: string; user: AuthUser };
 export const login = (email: string, password: string) => apiPost<AuthResponse>("/api/auth/login", { email, password });
 export const register = (name: string, email: string, password: string) =>
   apiPost<AuthResponse>("/api/auth/register", { name, email, password });
+export const registrationStatus = () => apiGet<{ enabled: boolean }>("/api/auth/registration");
 export const verifySession = () => apiGet<{ user: AuthUser }>("/api/auth/me");
 export const changePassword = (current_password: string, new_password: string) =>
   apiPost<{ updated: boolean }>("/api/auth/change-password", { current_password, new_password });

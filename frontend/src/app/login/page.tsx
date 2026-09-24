@@ -5,11 +5,12 @@ import { ArrowRight, BarChart3, Eye, EyeOff, Layers3, LockKeyhole, Mail, ShieldC
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Brand } from "@/components/shared/brand";
-import { hasSession, login, register, saveSession, verifySession } from "@/services/auth";
+import { hasSession, login, register, registrationStatus, saveSession, verifySession } from "@/services/auth";
 
 export default function LoginPage() {
   const router = useRouter();
   const [mode, setMode] = useState<"login" | "register">("login");
+  const [registrationEnabled, setRegistrationEnabled] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,8 +19,13 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [checkingSession, setCheckingSession] = useState<boolean | null>(null);
   useEffect(() => {
-    const timer = window.setTimeout(() => { if (new URLSearchParams(window.location.search).get("mode") === "register") setMode("register"); }, 0);
-    return () => window.clearTimeout(timer);
+    let active = true;
+    void registrationStatus().then(result => {
+      if (!active) return;
+      setRegistrationEnabled(result.data.enabled);
+      if (result.data.enabled && new URLSearchParams(window.location.search).get("mode") === "register") setMode("register");
+    }).catch(() => { if (active) setRegistrationEnabled(false); });
+    return () => { active = false; };
   }, []);
   useEffect(() => {
     let active = true;
@@ -35,10 +41,11 @@ export default function LoginPage() {
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setError(""); setBusy(true);
     try {
-      const result = mode === "login" ? await login(email, password) : await register(name, email, password);
+      const result = mode === "login" ? await login(email, password) : registrationEnabled ? await register(name, email, password) : null;
+      if (!result) throw new Error("Registration is currently closed");
       saveSession(result.data.token, result.data.user);
       const selectedPlan = new URLSearchParams(window.location.search).get("plan");
-      router.replace(mode === "register" || selectedPlan ? `/onboarding${selectedPlan ? `?plan=${encodeURIComponent(selectedPlan)}` : ""}` : "/dashboard");
+      router.replace(mode === "register" ? `/onboarding${selectedPlan ? `?plan=${encodeURIComponent(selectedPlan)}` : ""}` : "/dashboard");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Authentication failed");
     } finally { setBusy(false); }
@@ -61,9 +68,9 @@ export default function LoginPage() {
         {mode === "register" && <small>Use at least 10 characters.</small>}
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="sign-in" disabled={busy}>{busy ? "Working…" : mode === "login" ? "Sign In" : "Create Account"} <ArrowRight/></button>
-        <button type="button" className="text-action" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }}>
+        {registrationEnabled ? <button type="button" className="text-action" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }}>
           {mode === "login" ? "Create a research account" : "Already have an account? Sign in"}
-        </button>
+        </button> : <p className="login-registration-note">Registration is currently closed. Please sign in with an existing account.</p>}
       </div></form><div className="login-bottom-note">NICKEL POWERS<br/>POSSIBILITIES <i/></div>
     </section>
   </main>;

@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_session
+from app.core.config import get_settings
 from app.models.research import SessionRecord, UserRecord
 from app.schemas.common import Envelope, ResponseMeta
 
@@ -78,6 +79,8 @@ async def issue_session(user: UserRecord, session: AsyncSession) -> dict:
 
 @router.post("/auth/register")
 async def register(request: RegisterRequest, session: AsyncSession = Depends(get_session)):
+    if not get_settings().public_registration_enabled:
+        raise HTTPException(status_code=403, detail="Registration is currently closed")
     email = request.email.strip().lower()
     if await session.scalar(select(UserRecord).where(UserRecord.email == email)):
         raise HTTPException(status_code=409, detail="Email already registered")
@@ -88,6 +91,12 @@ async def register(request: RegisterRequest, session: AsyncSession = Depends(get
     session.add(user)
     await session.flush()
     return Envelope(data=await issue_session(user, session), meta=ResponseMeta(source="database"))
+
+
+@router.get("/auth/registration")
+async def registration_status():
+    return Envelope(data={"enabled": get_settings().public_registration_enabled},
+                    meta=ResponseMeta(source="database"))
 
 
 @router.post("/auth/login")
