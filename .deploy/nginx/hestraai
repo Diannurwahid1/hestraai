@@ -1,7 +1,12 @@
 server {
-    listen 80;
-    listen [::]:80;
+    listen 443 ssl;
+    listen [::]:443 ssl;
     server_name hestra-ai.diannurwahid.com;
+
+    ssl_certificate /etc/letsencrypt/live/hestra-ai.diannurwahid.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/hestra-ai.diannurwahid.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
     client_max_body_size 10m;
 
@@ -38,4 +43,11 @@ server {
         proxy_set_header Connection "upgrade";
         proxy_read_timeout 90s;
     }
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name hestra-ai.diannurwahid.com;
+    return 301 https://$host$request_uri;
 }
