@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.api import ai_model, auth, chat, companies, context, dashboard, discover, investigations, onboarding, research_memory
+from app.api import ai_model, auth, billing, chat, companies, context, dashboard, discover, investigations, onboarding, research_memory
 from app.core.config import get_settings
 from app.db.session import init_db
 from app.services.sectors_client import SectorsError
@@ -20,7 +20,8 @@ settings = get_settings()
 app.add_middleware(CORSMiddleware, allow_origins=[settings.frontend_origin], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 app.include_router(auth.router, prefix="/api")
-for router in (ai_model.router, dashboard.router, discover.router, companies.router, investigations.router, research_memory.router, context.router, chat.router, onboarding.router):
+app.include_router(billing.webhook_router, prefix="/api")
+for router in (ai_model.router, billing.router, dashboard.router, discover.router, companies.router, investigations.router, research_memory.router, context.router, chat.router, onboarding.router):
     app.include_router(router, prefix="/api", dependencies=[Depends(get_current_user)])
 
 

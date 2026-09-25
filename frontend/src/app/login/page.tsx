@@ -9,6 +9,10 @@ import { hasSession, login, register, registrationStatus, saveSession, verifySes
 
 export default function LoginPage() {
   const router = useRouter();
+  const nextPath = () => {
+    const requested = new URLSearchParams(window.location.search).get("next");
+    return requested?.startsWith("/") && !requested.startsWith("//") && !requested.includes("\\") ? requested : "/dashboard";
+  };
   const [mode, setMode] = useState<"login" | "register">("login");
   const [registrationEnabled, setRegistrationEnabled] = useState(false);
   const [name, setName] = useState("");
@@ -33,7 +37,7 @@ export default function LoginPage() {
       if (!hasSession()) { setCheckingSession(false); return; }
       setCheckingSession(true);
       void verifySession()
-        .then(() => { if (active) router.replace("/dashboard"); })
+        .then(() => { if (active) router.replace(nextPath()); })
         .catch(() => { if (active) setCheckingSession(false); });
     }, 0);
     return () => { active = false; window.clearTimeout(timer); };
@@ -45,7 +49,7 @@ export default function LoginPage() {
       if (!result) throw new Error("Registration is currently closed");
       saveSession(result.data.token, result.data.user);
       const selectedPlan = new URLSearchParams(window.location.search).get("plan");
-      router.replace(mode === "register" ? `/onboarding${selectedPlan ? `?plan=${encodeURIComponent(selectedPlan)}` : ""}` : "/dashboard");
+      router.replace(mode === "register" ? `/onboarding${selectedPlan ? `?plan=${encodeURIComponent(selectedPlan)}` : ""}` : nextPath());
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Authentication failed");
     } finally { setBusy(false); }

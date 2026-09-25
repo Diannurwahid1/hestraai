@@ -89,7 +89,7 @@ Never expose Sectors, database, or LLM credentials through `NEXT_PUBLIC_*` varia
 
 ## Sectors integration
 
-`backend/app/services/sectors_client.py` is the only low-level Sectors client. It injects the `Authorization` header, applies timeouts and retries, converts rate-limit/network failures into typed exceptions, and uses an in-memory TTL cache with request coalescing, stale-on-error fallback, 60 requests/minute process budget, and four concurrent requests by default. Normalized research snapshots and the paginated nickel directory are cached separately. The current path uses Sectors API v2 endpoints for:
+`backend/app/services/sectors_client.py` is the only low-level Sectors client. It injects the `Authorization` header, applies timeouts and retries, converts rate-limit/network failures into typed exceptions, and uses a shared per-process in-memory TTL cache with request coalescing, stale-on-error fallback, 60 requests/minute process budget, and four concurrent requests by default. Company reports default to a 1-hour TTL, mining data to 24 hours, commodity history to 1 hour, and daily prices to 5 minutes; each is configurable. Normalized research snapshots and the paginated nickel directory are cached separately. Cached values follow Sectors' own update schedule and are not a live market stream. The current path uses Sectors API v2 endpoints for:
 
 - `GET /v2/company/report/{symbol}/`
 - `GET /v2/daily/{symbol}/`
@@ -102,6 +102,26 @@ Presentation components never receive raw Sectors payloads. Services normalize e
 ```json
 { "data": {}, "meta": { "source": "sectors", "cached": false } }
 ```
+
+Successful upstream HTTP calls, cache hits, stale fallbacks, status codes, and endpoint paths are now persisted in `sectors_requests`. Set `HESTRA_ADMIN_EMAIL` to an existing account email to view the global 30-day summary at `GET /api/billing/sectors-usage`. The summary reports HTTP calls, **not Sectors credits**: the current verified integration has no confirmed per-endpoint credit charge. Do not set customer Data Unit limits or capacity estimates from HTTP counts without reconciling them against Sectors' actual credit balance/billing statement. In-memory cache is shared only within one backend process; multi-worker deployments require a shared Redis or database cache for cross-worker deduplication.
+
+## Pricing and SumoPod sandbox
+
+The pricing page presents a 7-day trial and proposed Researcher (Rp199k), Analyst (Rp399k), and Team (from Rp1.49m) tiers. Data Unit allowances and tier feature gates are **not enforced** yet while actual Sectors credit burn and downstream data-redistribution rights remain unverified. Every AI plan is BYOK; users configure their own AI provider key in Settings.
+
+Only the SumoPod **sandbox** API is supported. Fill these backend-only variables after obtaining them from SumoPod:
+
+```env
+SUMOPOD_BASE_URL=https://api-pay-sandbox.sumopod.com
+SUMOPOD_API_KEY=your-sandbox-key
+SUMOPOD_WEBHOOK_SECRET=whsec_your-sandbox-signing-secret
+# Or use SUMOPOD_WEBHOOK_TOKEN instead of the signing secret.
+HESTRA_ADMIN_EMAIL=your-operator-account@example.com
+```
+
+Set the SumoPod webhook URL to `<public backend origin>/api/billing/sumopod/webhook` and ensure your reverse proxy routes that path to FastAPI. A signed, matching `payment.completed` event activates a one-time 30-day **sandbox** entitlement; redirecting back from checkout never activates it. The flow does not create automatic renewal or charge real money. The checkout rejects non-sandbox API and payment-link hosts. The sandbox API key has been tested against SumoPod's create-payment endpoint and returned a pending payment link on `pay-sandbox.sumopod.com`; real webhook delivery still requires public deployment and SumoPod webhook configuration.
+
+The operator-only `POST /api/billing/economics` endpoint accepts explicit scenario inputs (`researchers`, `analysts`, `sectors_monthly_cost_idr`, `sectors_monthly_credits`, optional `average_credits_per_user`, `payment_method`) and returns revenue, QRIS fee estimate, remaining amount before hosting/tax/support, and capacity if a per-user credit assumption is supplied. It deliberately never reports an unknown credit burn as fact.
 
 ## Deterministic analytics
 

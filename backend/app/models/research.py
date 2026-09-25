@@ -99,3 +99,46 @@ class AIUsageLogRecord(Base):
     response_preview: Mapped[str] = mapped_column(Text, default="")
     error_message: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class SectorsRequestRecord(Base):
+    __tablename__ = "sectors_requests"
+    id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    endpoint: Mapped[str] = mapped_column(String(240), index=True)
+    cache_status: Mapped[str] = mapped_column(String(20))
+    http_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
+class PaymentRecord(Base):
+    __tablename__ = "sandbox_payments"
+    order_id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(80), index=True)
+    plan: Mapped[str] = mapped_column(String(30))
+    amount_idr: Mapped[int] = mapped_column(Integer)
+    payment_id: Mapped[str | None] = mapped_column(String(100), unique=True, nullable=True)
+    payment_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    status: Mapped[str] = mapped_column(String(30), default="creating")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class SubscriptionRecord(Base):
+    __tablename__ = "sandbox_subscriptions"
+    user_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    plan: Mapped[str] = mapped_column(String(30))
+    status: Mapped[str] = mapped_column(String(30))
+    starts_at: Mapped[datetime] = mapped_column(DateTime)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    trial_used: Mapped[bool] = mapped_column(default=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PaymentWebhookEventRecord(Base):
+    __tablename__ = "sumopod_webhook_events"
+    event_id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    order_id: Mapped[str] = mapped_column(String(100), index=True)
+    event_type: Mapped[str] = mapped_column(String(50))
+    received_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

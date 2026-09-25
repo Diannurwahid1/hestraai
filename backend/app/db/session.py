@@ -17,6 +17,6 @@ async def get_session():
 
 
 async def init_db():
-    from app.models.research import AIModelSettingRecord, AIUsageLogRecord, ChatMessageRecord, ChatPresentationRecord, ContextRecord, OnboardingRecord, ResearchMemoryRecord, SessionRecord, UserRecord
+    from app.models.research import AIModelSettingRecord, AIUsageLogRecord, ChatMessageRecord, ChatPresentationRecord, ContextRecord, OnboardingRecord, PaymentRecord, PaymentWebhookEventRecord, ResearchMemoryRecord, SectorsRequestRecord, SessionRecord, SubscriptionRecord, UserRecord
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

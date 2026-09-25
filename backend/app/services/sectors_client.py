@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 from collections import deque
-from typing import Any
+from typing import Any, Awaitable, Callable
 import httpx
 from app.core.config import Settings, get_settings
 from app.services.cache import TTLCache
@@ -23,10 +23,15 @@ class SectorsRateLimited(SectorsError):
 
 
 class SectorsClient:
-    def __init__(self, settings: Settings | None = None, transport: httpx.AsyncBaseTransport | None = None):
+    def __init__(self, settings: Settings | None = None, transport: httpx.AsyncBaseTransport | None = None,
+                 usage_recorder: Callable[[str, str, int | None, int | None], Awaitable[None]] | None = None):
         self.settings = settings or get_settings()
         self.cache = TTLCache(self.settings.sectors_cache_ttl_seconds)
+        self.company_cache = TTLCache(self.settings.sectors_company_cache_ttl_seconds)
+        self.mining_cache = TTLCache(self.settings.sectors_mining_cache_ttl_seconds)
+        self.commodity_cache = TTLCache(self.settings.sectors_commodity_cache_ttl_seconds)
         self.research_cache = TTLCache(self.settings.sectors_cache_ttl_seconds)
+        self.usage_recorder = usage_recorder
         self._rate_lock = asyncio.Lock()
         self._request_times: deque[float] = deque()
         self._semaphore = asyncio.Semaphore(self.settings.sectors_max_concurrency)
@@ -43,6 +48,15 @@ class SectorsClient:
         if not self.configured:
             raise SectorsUnavailable("SECTORS_API_KEY is not configured")
         cache_key = f"{path}:{sorted((params or {}).items())}"
+        cache = (self.company_cache if path.startswith("/v2/company/report/") else
+                 self.mining_cache if path.startswith("/v2/mining/companies/") else
+                 self.commodity_cache if path.startswith("/v2/mining/commodities/") else self.cache)
+        async def meter(status: str, http_status: int | None = None, duration_ms: int | None = None) -> None:
+            if self.usage_recorder:
+                try:
+                    await self.usage_recorder(path, status, http_status, duration_ms)
+                except Exception:
+                    logger.exception("Sectors usage recorder failed")
         async def fetch() -> Any:
             for attempt in range(3):
                 try:
@@ -54,7 +68,9 @@ class SectorsClient:
                             raise SectorsRateLimited("Sectors request budget reached; retry shortly")
                         self._request_times.append(now)
                     async with self._semaphore:
+                        started = time.monotonic()
                         response = await self.client.get(path, params=params, headers={"Authorization": self.settings.sectors_api_key})
+                    await meter("upstream", response.status_code, round((time.monotonic() - started) * 1000))
                     if response.status_code == 429:
                         if attempt == 2:
                             raise SectorsRateLimited("Sectors rate limit exceeded")
@@ -63,6 +79,7 @@ class SectorsClient:
                     response.raise_for_status()
                     return response.json()
                 except (httpx.TimeoutException, httpx.NetworkError) as exc:
+                    await meter("upstream", None, None)
                     if attempt == 2:
                         logger.warning("Sectors request failed: %s", exc)
                         raise SectorsUnavailable("Sectors is temporarily unavailable") from exc
@@ -71,10 +88,14 @@ class SectorsClient:
                     raise SectorsError(f"Sectors returned HTTP {exc.response.status_code}") from exc
             raise SectorsUnavailable("Sectors is temporarily unavailable")
         try:
-            return await self.cache.get_or_set(cache_key, fetch)
+            result, cached = await cache.get_or_set(cache_key, fetch)
+            if cached:
+                await meter("hit")
+            return result, cached
         except SectorsError:
-            stale = await self.cache.get_stale(cache_key)
+            stale = await cache.get_stale(cache_key)
             if stale is not None:
+                await meter("stale")
                 return stale, True
             raise
 
