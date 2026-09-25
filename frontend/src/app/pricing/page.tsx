@@ -59,7 +59,7 @@ export default function PricingPage() {
         </button>}
       <ul>{plan.features.map(feature => <li key={feature}><Check size={15}/>{feature}</li>)}</ul>
     </article>)}</div>
-    <div className="pricing-notes"><p><ShieldCheck size={16}/> Data Unit allowances are intentionally not final until real Sectors credit consumption and licensing are verified. The prices above are business hypotheses, not cost-based commitments.</p>
+    <div className="pricing-notes"><p><ShieldCheck size={16}/> Data Unit allowances are intentionally not final until real Sectors credit consumption and licensing are verified. The prices above are business hypotheses, not cost-based commitments. The sandbox payment page may add a QRIS gateway fee to the displayed plan price.</p>
       <p>Sandbox checkout issues a one-time 30-day test entitlement only after a verified SumoPod webhook. A return from the payment page does not confirm payment. Tier feature limits are not enforced yet. {registrationEnabled ? "New accounts can register." : "New registration is currently closed; existing members can sign in."}</p></div>
   </main>;
 }

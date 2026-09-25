@@ -80,6 +80,20 @@ def _sandbox_url(url: str, host: str) -> bool:
     return parsed.scheme == "https" and parsed.hostname == host and parsed.port in (None, 443)
 
 
+def _matches_order_amount(data: dict, price: int) -> bool:
+    """Accept SumoPod's documented merchant-pays and observed customer-pays fee modes."""
+    amount, fee, net = data.get("amount"), data.get("fee"), data.get("net_amount")
+    if type(amount) is not int or amount <= 0:
+        return False
+    if fee is None and net is None:
+        return amount == price
+    if type(fee) is not int or type(net) is not int or fee < 0 or net <= 0:
+        return False
+    if net != amount - fee:
+        return False
+    return amount == price or net == price
+
+
 def _parse_time(value: str | None) -> datetime | None:
     if not value:
         return None
@@ -139,7 +153,7 @@ async def create_checkout(session: AsyncSession, user_id: str, plan: str, settin
         if not isinstance(result, dict):
             raise ValueError("Invalid sandbox payment response")
         url = result.get("payment_link_url", "")
-        if (result.get("order_id") != order_id or result.get("amount") != amount or
+        if (result.get("order_id") != order_id or not _matches_order_amount(result, amount) or
                 result.get("status") != "pending" or not result.get("payment_id") or
                 not _sandbox_url(url, SANDBOX_PAY_HOST)):
             raise ValueError("SumoPod sandbox returned an invalid or non-sandbox payment link")
@@ -149,7 +163,8 @@ async def create_checkout(session: AsyncSession, user_id: str, plan: str, settin
         record.expires_at = _parse_time(result.get("expires_at")) or datetime.utcnow() + timedelta(hours=24)
         await session.commit()
         return {"order_id": order_id, "status": "pending", "payment_url": url,
-                "expires_at": record.expires_at.isoformat() + "Z", "amount_idr": amount, "plan": plan,
+                "expires_at": record.expires_at.isoformat() + "Z", "amount_idr": amount,
+                "customer_payable_idr": result["amount"], "gateway_fee_idr": result.get("fee", 0), "plan": plan,
                 "environment": "sandbox"}
     except (httpx.HTTPError, ValueError, json.JSONDecodeError) as exc:
         record.status = "failed"
@@ -172,7 +187,7 @@ async def apply_webhook(session: AsyncSession, event_id: str, payload: dict) -> 
     if await session.get(PaymentWebhookEventRecord, event_id):
         return {"received": True, "duplicate": True}
     payment = await session.scalar(select(PaymentRecord).where(PaymentRecord.order_id == order_id).with_for_update())
-    if not payment or payment.payment_id != data.get("payment_id") or payment.amount_idr != data.get("amount"):
+    if not payment or payment.payment_id != data.get("payment_id") or not _matches_order_amount(data, payment.amount_idr):
         raise HTTPException(400, "Webhook payment does not match a sandbox order")
     expected_status = event_type.removeprefix("payment.")
     if data.get("status") != expected_status:

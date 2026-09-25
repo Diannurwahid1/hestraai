@@ -68,6 +68,37 @@ async def test_sandbox_checkout_and_verified_idempotent_webhook(session):
 
 
 @pytest.mark.asyncio
+async def test_sandbox_checkout_accepts_customer_paid_gateway_fee(session):
+    async def handler(request: httpx.Request):
+        order = json.loads(request.content)["order_id"]
+        return httpx.Response(201, json={"order_id": order, "amount": 200_693,
+            "fee": 1_693, "net_amount": 199_000, "currency": "IDR",
+            "payment_id": "payment-fee", "payment_link_url": "https://pay-sandbox.sumopod.com/pay/payment-fee",
+            "status": "pending"})
+    result = await create_checkout(session, "user-1", "researcher", settings(), httpx.MockTransport(handler))
+    assert result["status"] == "pending" and result["amount_idr"] == 199_000
+    payload = {"event_type": "payment.completed", "data": {"payment_id": "payment-fee",
+        "order_id": result["order_id"], "amount": 200_693, "fee": 1_693,
+        "net_amount": 199_000, "status": "completed"}}
+    assert (await apply_webhook(session, "evt-fee", payload))["status"] == "completed"
+    subscription = await session.get(SubscriptionRecord, "user-1")
+    assert subscription.plan == "researcher" and subscription.status == "active"
+
+
+@pytest.mark.asyncio
+async def test_sandbox_checkout_rejects_inconsistent_gateway_fee(session):
+    async def handler(request: httpx.Request):
+        order = json.loads(request.content)["order_id"]
+        return httpx.Response(201, json={"order_id": order, "amount": 200_693,
+            "fee": 1_000, "net_amount": 199_000,
+            "payment_id": "payment-fee", "payment_link_url": "https://pay-sandbox.sumopod.com/pay/payment-fee",
+            "status": "pending"})
+    with pytest.raises(HTTPException) as error:
+        await create_checkout(session, "user-1", "researcher", settings(), httpx.MockTransport(handler))
+    assert error.value.status_code == 502
+
+
+@pytest.mark.asyncio
 async def test_forged_or_mismatched_webhook_never_activates(session):
     session.add(PaymentRecord(order_id="order-1", user_id="user-1", plan="researcher",
                               amount_idr=199_000, payment_id="payment-1", status="pending"))
