@@ -4,6 +4,41 @@
 
 Full-stack research workspace for analysts following Indonesia's nickel ecosystem. The interface is deliberate and fixed; AI acts as the research layer around signals, evidence, company context, investigations, and persistent per-user research memory.
 
+[![Live App](https://img.shields.io/badge/Live_App-Open_Hestra_AI-0866ff?style=for-the-badge)](https://hestra-ai.diannurwahid.com/)
+[![Sectors-backed](https://img.shields.io/badge/Data-Sectors--backed-16c79a?style=for-the-badge)](https://sectors.app/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-e8eef7?style=for-the-badge)](./LICENSE)
+
+## Try Hestra AI live
+
+The public workspace is available at **[hestra-ai.diannurwahid.com](https://hestra-ai.diannurwahid.com/)**. Create your own account, complete the research-profile onboarding, and explore the workspace. AI inference uses a bring-your-own-key model: connect a supported OpenAI-compatible provider from **Settings → AI Model** when you want live AI explanations.
+
+> The hosted payment flow is a sandbox demonstration. Research conclusions should be checked against the provenance attached to each datapoint.
+
+## Product preview
+
+### Evidence-backed intelligence workspace
+
+![Hestra AI dashboard showing real derived nickel signals, market data, and the research assistant](./showcase/public/screens/dashboard.png)
+
+<table>
+  <tr>
+    <td width="50%"><img src="./showcase/public/screens/company.png" alt="Hestra AI company intelligence page" /></td>
+    <td width="50%"><img src="./showcase/public/screens/investigation.png" alt="Hestra AI investigation evidence workflow" /></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Company intelligence</strong></td>
+    <td align="center"><strong>Traceable investigation evidence</strong></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./showcase/public/screens/chat.png" alt="Hestra AI research assistant with structured evidence cards" /></td>
+    <td width="50%"><img src="./showcase/public/screens/memory.png" alt="Hestra AI persistent research memory" /></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Interactive research assistant</strong></td>
+    <td align="center"><strong>Persistent research memory</strong></td>
+  </tr>
+</table>
+
 > Data disclosure: Hestra research signals are derived by our deterministic signal engine from Sectors data; they are not native fields provided by Sectors. Investigation evidence is assembled from available Sectors-backed sources by Hestra's research orchestration, with source provenance preserved for each datapoint. Unavailable research facts are marked unresolved.
 
 ## Product flow
@@ -13,7 +48,7 @@ Full-stack research workspace for analysts following Indonesia's nickel ecosyste
 ## Screens and routes
 
 - `/` — public landing page
-- `/pricing` — illustrative plan selection; no checkout, payment, billing, or entitlement enforcement
+- `/pricing` — illustrative plan selection with SumoPod sandbox checkout
 - `/login` — register a personal account or sign in
 - `/onboarding` — save name, research level, role, language, focus companies, and research goal
 - `/dashboard` — KPIs, nickel intelligence feed, coverage universe, market chart
@@ -36,6 +71,14 @@ Design references live in [`references/`](./references). The implementation uses
 - Persistence: PostgreSQL/Supabase or SQLite async for local use
 - AI: provider-neutral service interface with a configurable OpenAI-compatible model gateway
 - Transport: REST for application data and authenticated chat
+
+## Repository documents
+
+- [`LICENSE`](./LICENSE) — MIT license for the project code.
+- [`NOTICE.md`](./NOTICE.md) — data, AI provider, third-party software, and generated media notices.
+- [`SECURITY.md`](./SECURITY.md) — public release security policy and secret-handling checklist.
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — local setup, development rules, and quality checks.
+- [`HACKATHON_SUBMISSION.md`](./HACKATHON_SUBMISSION.md) — judge-facing workflow and demo boundaries.
 
 ## Run locally
 
@@ -157,3 +200,17 @@ Chat explanations render as safe Markdown. Evidence cards and charts are assembl
 cd frontend && npm run build && npm run lint
 cd backend && python -m pytest
 ```
+
+## Public release hygiene
+
+Before pushing this repository publicly:
+
+- confirm `backend/.env`, local databases, generated media, and recordings are not tracked,
+- rotate any credential that has ever appeared in chat, terminal logs, screenshots, or browser recordings,
+- keep SumoPod in sandbox mode unless production payment handling has been reviewed,
+- verify Sectors data redistribution rights before offering paid public access,
+- run both frontend and backend quality checks.
+
+## License
+
+This project is released under the MIT License. See [`LICENSE`](./LICENSE).

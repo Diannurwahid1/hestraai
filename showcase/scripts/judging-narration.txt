@@ -1,0 +1,19 @@
+Nickel analysts do not lack data. They lack a reliable path from scattered facts to a defensible research conclusion.
+
+Company financials, commodity movements, mining context, and peer performance often live in separate views. Connecting them manually is slow, and a conventional chatbot may produce a confident answer before establishing what the evidence can actually support.
+
+Hestra AI is an adaptive research workspace for Indonesia's nickel market. Sectors provides the underlying market and company facts. Hestra normalizes those facts, applies deterministic financial calculations, and produces traceable research signals. The language model does not calculate these metrics.
+
+This is the live Hestra workspace. The dashboard shows the latest available nickel benchmark, a verified company universe, and three signal families. For this walkthrough, Hestra detected an operational and financial divergence for Aneka Tambang.
+
+The signal states that company revenue grew sixty-eight point five seven percent year over year, while EBITDA margin fell by six point two three percentage points. Hestra is explicit about the limitation: revenue is an activity proxy, because production volume history is unavailable in the connected Sectors mining endpoints.
+
+Opening the investigation reveals the complete evidence chain. Every card includes its reporting period, Sectors source type, source reference, and the deterministic inputs used in the calculation. Commodity and peer evidence are attached to test whether the initial explanation is sufficient.
+
+Hestra then asks the configured AI model to explain only the compact evidence bundle. The answer is presented as interactive evidence cards, not an untraceable block of text. The system also preserves what remains unresolved, including missing production history, realized nickel prices, and company-specific cost detail. Missing evidence is shown as a limitation, never fabricated.
+
+The investigation can be saved into Research Memory, preserving the signal, source context, and reasoning for later review.
+
+The architecture is deliberate: Sectors facts flow through normalization, a deterministic signal engine, evidence orchestration, and only then an AI explanation. Users bring their own supported AI provider, while Hestra supplies the intelligence layer, provenance, caching, and research memory.
+
+Same facts. Better questions. Defensible research. Hestra AI: Adaptive Nickel Intelligence.

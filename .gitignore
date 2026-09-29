@@ -39,3 +39,19 @@ Thumbs.db
 
 # QA captures and local review material
 qa/
+frontend/qa/
+frontend/scripts/*.mp3
+frontend/scripts/*.wav
+frontend/scripts/*.webm
+frontend/scripts/*.mp4
+
+# Local source exports for the optimized public hero model
+frontend/public/base_basic_*.glb
+frontend/public/texture_emissive.png
+
+# Rendered Remotion video; source and captured product stills stay versioned
+showcase/out/
+showcase/public/audio/*.wav
+showcase/public/audio/*.mp3
+showcase/public/judging/*.webm
+showcase/public/judging/*.mp4
